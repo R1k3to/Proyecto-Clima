@@ -73,7 +73,7 @@ plt.figure(figsize=(12, 6))  # Definimos el tamaño del lienzo (ancho y alto)
 
 # 4. Dibujamos las barras
 # 'ubi' es el nombre de la ciudad y 'ta' es la temperatura
-plt.bar(top_10_tenerife['ubi'], top_10_tenerife['ta'], color='indigo')
+plt.bar(top_10_tenerife['ubi'], top_10_tenerife['ta'], color='darkorange')
 
 # 5. Ponemos "carteles" para que se entienda
 plt.title('Temperatura actual en las estaciones de AEMET en Tenerife', fontsize=30)
@@ -139,9 +139,9 @@ min_temp = muestra_grafico['ta'].min()
 colores = []
 for temperatura in muestra_grafico['ta']:
     if temperatura == max_temp:
-        colores.append('red')    # Máximo
+        colores.append('darkred')    # Máximo
     elif temperatura == min_temp:
-        colores.append('blue')   # Mínimo
+        colores.append('darkblue')   # Mínimo
     else:
         colores.append('lightgrey') # Resto
 
@@ -167,7 +167,7 @@ plt.show()
 
 # 1. Definimos nuestro "umbral" de alerta
 # Es mejor usar una variable para poder cambiarla fácilmente en el futuro
-limite_calor = 30.0
+limite_calor = 20.0
 
 print(f"🕵️ Robot: Iniciando vigilancia... (Límite configurado: {limite_calor}°C)")
 print("-" * 50)
@@ -195,33 +195,97 @@ if not ciudades_en_alerta.empty:
     ciudades_en_alerta.to_csv(nombre_alerta, index=False)
     print(f"📝 Se ha generado un registro de incidencias en: {nombre_alerta}")
 
-# 🌦️ Proyecto: Vigilante Climático AEMET
+# 1. Importamos el "cerebro" de predicción
+from sklearn.linear_model import LinearRegression
+import numpy as np
 
-# ## 📝 Descripción
-# Este proyecto es un sistema automático desarrollado en **Python** que se conecta a la API de **AEMET (Agencia Estatal de Meteorología)** para monitorizar el clima en tiempo real. El objetivo es recopilar datos, analizarlos y generar alertas automáticas si se detectan temperaturas extremas.
+# 2. Preparamos los datos
+# Supongamos que 'X' son las horas del día (9, 10, 11, 12...)
+# Y 'y' son las temperaturas que ha leído el robot
+X = np.array([9, 10, 11, 12, 13, 14]).reshape(-1, 1) # Horas
+y = np.array([18, 19, 21, 22, 24, 25])             # Temperaturas reales
 
-# ## 🚀 Funcionalidades
-# - **Extracción Automática:** Conexión con la API de AEMET usando una clave VIP.
-# - **Análisis de Datos:** Cálculo de temperaturas máximas y mínimas mediante la librería **Pandas**.
-# - **Visualización:** Generación de gráficos de barras con **Matplotlib** resaltando los extremos en colores.
-# - **Sistema de Alerta:** Detección de olas de calor y generación de informes de incidencias.
-# - **Histórico:** Guardado de datos con fecha automática para crear una base de datos histórica.
+# 3. Creamos el modelo de predicción
+modelo = LinearRegression()
 
-# ## 🛠️ Herramientas utilizadas
-# - **Lenguaje:** Python 3
-# - **Librerías:** - `Requests`: Para navegar por internet.
-#   - `Pandas`: Para organizar los datos en tablas.
-#   - `Matplotlib`: Para crear los gráficos.
-#   - `Datetime`: Para gestionar el calendario y los nombres de archivos.
+# 4. ENTRENAMIENTO: El robot estudia los datos para aprender la tendencia
+modelo.fit(X, y)
 
-# ## 📊 Ejemplo de Visualización
-# *Aquí puedes ver una muestra de los gráficos que genera nuestro robot:*
-# ![Gráfico de ejemplo](analisis_extremos_clima.png)
+# 5. PREDICCIÓN: Le preguntamos "¿Qué temperatura hará a las 16:00?"
+hora_futura = np.array([[16]])
+prediccion = modelo.predict(hora_futura)
 
-# ## 👤 Autores
-# - **Alumno/a:** [Nombre del Alumno]
-# - **Curso:** [Curso escolar]
-# - **Institución:** [Nombre del centro educativo]
+print(f"🔮 Robot: Según la tendencia, a las 16:00 hará unos {prediccion[0]:.2f}°C")
 
-# ---
-# *Este proyecto se ha realizado con fines educativos para aprender Ciencia de Datos y Programación.*
+# Dibujamos los puntos reales
+plt.scatter(X, y, color='green', label='Datos reales')
+
+# Dibujamos la línea que el robot cree que sigue el clima
+plt.plot(X, modelo.predict(X), color='gold', label='Línea de tendencia')
+
+plt.title('Predicción del robot: ¿Hacia dónde va la temperatura?')
+plt.xlabel('Hora del día')
+plt.ylabel('Temperatura (°C)')
+plt.legend()
+plt.show()
+
+# 1. Herramientas necesarias
+from sklearn.linear_model import LinearRegression
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+# 2. Imaginemos que nuestra 'tabla_clima' tiene datos de una estación 
+# a lo largo del tiempo (ej. de 8:00 a 13:00)
+datos_estacion = {
+    'hora': [8, 9, 10, 11, 12, 13],
+    'ta': [16.5, 17.2, 18.5, 20.1, 21.4, 23.0]
+}
+df_pred = pd.DataFrame(datos_estacion)
+
+# 3. Preparar los datos para la IA
+# El robot necesita las horas en una columna vertical (X) y las temperaturas en otra (y)
+X = df_pred['hora'].values.reshape(-1, 1) 
+y = df_pred['ta'].values
+
+# 4. Crear y entrenar el modelo (El robot estudia la tendencia)
+IA_clima = LinearRegression()
+IA_clima.fit(X, y)
+
+# 5. Predecir la temperatura de la próxima hora (las 14:00)
+proxima_hora = [[14]]
+prediccion = IA_clima.predict(proxima_hora)
+
+print(f"🔮 Predicción IA: A las 14:00 la temperatura estimada es de {prediccion[0]:.2f}°C")
+
+# 6. Dibujar la "Recta de Predicción"
+plt.figure(figsize=(10, 6))
+plt.scatter(X, y, color='green', label='Datos reales medidos') # Puntos reales
+plt.plot(X, IA_clima.predict(X), color='gold', linewidth=2, label='Tendencia calculada') # Línea de la IA
+plt.scatter(proxima_hora, prediccion, color='crimson', marker='*', s=200, label='Predicción futura') # Estrellita futura
+
+plt.title('Modelo de Predicción Lineal: Tendencia Térmica')
+plt.xlabel('Hora del día')
+plt.ylabel('Temperatura (°C)')
+plt.legend()
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.show()
+
+# 1. Obtenemos la 'pendiente' (slope) de la línea de la IA
+# La pendiente nos dice cuántos grados sube o baja el clima por cada hora
+pendiente = IA_clima.coef_[0]
+
+print(f"📊 Análisis de tendencia: {pendiente:.2f} °C por hora.")
+print("-" * 50)
+
+# 2. El Robot decide qué consejo dar
+if pendiente > 1.0:
+    consejo = "🔥 ¡Cuidado! El calor está subiendo rápidamente. Hidrátate y busca sombra."
+elif pendiente > 0:
+    consejo = "☀️ El día se está calentando suavemente. Disfruta del sol con precaución."
+elif pendiente < -1.0:
+    consejo = "🧊 ¡Atención! La temperatura está bajando de golpe. Coge una chaqueta."
+else:
+    consejo = "☁️ El clima está muy estable ahora mismo. No se esperan cambios bruscos."
+
+print(f"🤖 CONSEJO DEL ROBOT: {consejo}")
