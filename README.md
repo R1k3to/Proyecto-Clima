@@ -29,3 +29,8 @@ Este proyecto es un sistema automático desarrollado en **Python** que se conect
 ---
 *Este proyecto se ha realizado con fines educativos para aprender Ciencia de Datos y Programación.*
 
+🧠 Módulo de Predicción
+Hemos implementado un modelo de Regresión Lineal que permite estimar la evolución de la temperatura durante las próximas horas basándose en la tendencia actual.
+
+🤖 Inteligencia Artificial Aplicada
+Hemos incorporado un modelo de Machine Learning (Scikit-Learn) para calcular la tendencia de calentamiento. El sistema es capaz de proyectar la temperatura de la próxima hora con un margen de error basado en la progresión lineal del día.
