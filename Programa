@@ -14,6 +14,18 @@ api_key = input("🔑 Introduce tu API Key de AEMET: ")
 url_aemet = "https://opendata.aemet.es/opendata/api/observacion/convencional/todas"
 headers = {'cache-control': "no-cache", 'api_key': api_key}
 
+# --- DEFINICIÓN DE MUNICIPIOS DE TENERIFE ---
+municipios_tenerife = [
+    'Adeje', 'Arafo', 'Arico', 'Arona', 'Buenavista del Norte',
+    'Candelaria', 'El Rosario', 'El Sauzal', 'El Tanque', 'Fasnia', 'Garachico',
+    'Granadilla de Abona', 'Güímar', 'Vilaflor', 'Icod de los Vinos',
+    'La Guancha', 'La Laguna', 'La Orotava', 'La Victoria de Acentejo',
+    'La Matanza de Acentejo', 'Los Realejos', 'Los Silos', 'Santa Úrsula',
+    'Puerto de la Cruz', 'Tacoronte', 'Tegueste', 'Santa Cruz de Tenerife',
+    'San Juan de la Rambla', 'Guía de Isora', 'Santiago del Teide',
+    'San Miguel de Abona'
+]
+
 # --- VIAJE 1: Pedir permiso y dirección secreta ---
 print("🤖 Robot: Hola AEMET, ¿me das permiso para ver el clima de hoy?")
 respuesta_1 = requests.get(url_aemet, headers=headers)
@@ -30,10 +42,16 @@ if datos_permiso['estado'] == 200:
     respuesta_final = requests.get(url_secreta)
 
     # Estos son nuestros datos climáticos reales
-    datos_climaticos = respuesta_final.json()
+    datos_climaticos_todos = respuesta_final.json()
+    
+    # --- FILTRADO EXCLUSIVO PARA TENERIFE ---
+    datos_climaticos = [
+        estacion for estacion in datos_climaticos_todos 
+        if any(municipio.lower() in estacion.get('ubi', '').lower() for municipio in municipios_tenerife)
+    ]
 
     # Vamos a mostrar solo los primeros 2 registros para no llenar la pantalla
-    print("📊 Robot: ¡He traído los datos! Aquí tienes una muestra de las primeras estaciones:")
+    print("📊 Robot: ¡He traído los datos! Aquí tienes una muestra de las primeras estaciones de Tenerife:")
     print(datos_climaticos[:2])
 
 else:
@@ -53,17 +71,17 @@ print(tabla_clima.head()) # '.head()' le dice al robot: "enséñame solo las pri
 
 # 3. Guardar el trabajo para GitHub o Excel
 # Podemos guardar esta tabla en un archivo .csv (compatible con Excel)
-tabla_clima.to_csv("datos_aemet_final.csv", index=False)
-print("💾 Robot: He guardado la tabla en un archivo llamado 'datos_aemet_final.csv'")
+tabla_clima.to_csv("datos_aemet_tenerife_final.csv", index=False)
+print("💾 Robot: He guardado la tabla en un archivo llamado 'datos_aemet_tenerife_final.csv'")
 
 import matplotlib.pyplot as plt
 import pandas as pd
 
-# Supongamos que ya tienes tu DataFrame 'tabla_clima' con datos de AEMET
+# Supongamos que ya tienes tu DataFrame 'tabla_clima' con datos de AEMET de Tenerife
 # Asegúrate de que la columna 'ubi' contiene el nombre de las estaciones y 'ta' las temperaturas
 
-# 1. Filtramos los datos para obtener solo las estaciones de Tenerife
-tenerife_data = tabla_clima[tabla_clima['ubi'].str.contains('Tenerife', case=False)]
+# 1. Ya tenemos datos exclusivos de Tenerife (tabla_clima contiene solo municipios de Tenerife)
+tenerife_data = tabla_clima
 
 # 2. Preparamos los datos (aquí tomamos solo las 10 primeras estaciones para no sobrecargar el gráfico)
 top_10_tenerife = tenerife_data.head(10)
@@ -95,7 +113,7 @@ fecha_hoy = datetime.now().strftime("%Y-%m-%d")
 
 # 2. Creamos un nombre de archivo dinámico
 # Usamos una 'f' antes de las comillas para poder meter la variable entre llaves {}
-nombre_archivo = f"clima_canarias_{fecha_hoy}.csv"
+nombre_archivo = f"clima_tenerife_{fecha_hoy}.csv"
 
 # 3. Guardamos la tabla con ese nombre único
 tabla_clima.to_csv(nombre_archivo, index=False)
@@ -106,8 +124,8 @@ print(f"✅ Robot: ¡Misión cumplida! He guardado los datos en '{nombre_archivo
 temp_maxima_global = tabla_clima['ta'].max()
 temp_minima_global = tabla_clima['ta'].min()
 
-print(f"🌡️ La temperatura más alta registrada es: {temp_maxima_global}°C")
-print(f"❄️ La temperatura más baja registrada es: {temp_minima_global}°C")
+print(f"🌡️ La temperatura más alta registrada en Tenerife es: {temp_maxima_global}°C")
+print(f"❄️ La temperatura más baja registrada en Tenerife es: {temp_minima_global}°C")
 
 # 2. ¿Pero qué ciudades son esas?
 # Le pedimos al robot que busque la FILA completa donde la temperatura coincide con el máximo
@@ -116,13 +134,13 @@ ciudad_mas_fria = tabla_clima[tabla_clima['ta'] == temp_minima_global]
 
 # 3. Mostramos el nombre de la ciudad y su temperatura
 # '.values[0]' se usa para sacar el texto limpio de la tabla
-print(f"🔥 La ciudad más calurosa es {ciudad_mas_calurosa['ubi'].values[0]} con {temp_maxima_global}°C")
-print(f"🧊 La ciudad más fría es {ciudad_mas_fria['ubi'].values[0]} con {temp_minima_global}°C")
+print(f"🔥 La ciudad más calurosa de Tenerife es {ciudad_mas_calurosa['ubi'].values[0]} con {temp_maxima_global}°C")
+print(f"🧊 La ciudad más fría de Tenerife es {ciudad_mas_fria['ubi'].values[0]} con {temp_minima_global}°C")
 
 # Agrupamos por ciudad ('ubi') y calculamos el máximo y mínimo de su temperatura
 resumen_ciudades = tabla_clima.groupby('ubi')['ta'].agg(['max', 'min'])
 
-print("📋 Resumen de extremos por cada ciudad:")
+print("📋 Resumen de extremos por cada municipio de Tenerife:")
 print(resumen_ciudades)
 
 import matplotlib.pyplot as plt
@@ -152,9 +170,9 @@ plt.figure(figsize=(14, 7))
 barras = plt.bar(muestra_grafico['ubi'], muestra_grafico['ta'], color=colores)
 
 # 5. Añadimos títulos y etiquetas
-plt.title('Comparativa de Temperaturas: Identificando Extremos', fontsize=16, fontweight='bold')
+plt.title('Comparativa de Temperaturas en Tenerife: Identificando Extremos', fontsize=16, fontweight='bold')
 plt.ylabel('Temperatura (°C)', fontsize=12)
-plt.xlabel('Estaciones Meteorológicas', fontsize=12)
+plt.xlabel('Estaciones Meteorológicas de Tenerife', fontsize=12)
 plt.xticks(rotation=45, ha='right')
 
 # 6. Un toque final: añadir el número exacto encima de cada barra
@@ -169,7 +187,7 @@ plt.show()
 # Es mejor usar una variable para poder cambiarla fácilmente en el futuro
 limite_calor = 20.0
 
-print(f"🕵️ Robot: Iniciando vigilancia... (Límite configurado: {limite_calor}°C)")
+print(f"🕵️ Robot: Iniciando vigilancia en Tenerife... (Límite configurado: {limite_calor}°C)")
 print("-" * 50)
 
 # 2. Buscamos qué ciudades superan ese límite
@@ -179,7 +197,7 @@ ciudades_en_alerta = tabla_clima[tabla_clima['ta'] >= limite_calor]
 # 3. El robot toma una decisión:
 # 'len()' cuenta cuántas filas hay en esa sub-tabla
 if len(ciudades_en_alerta) > 0:
-    print(f"⚠️ ¡ATENCIÓN! Se han detectado {len(ciudades_en_alerta)} estaciones con temperaturas altas:")
+    print(f"⚠️ ¡ATENCIÓN! Se han detectado {len(ciudades_en_alerta)} estaciones en Tenerife con temperaturas altas:")
 
     # Recorremos la lista de ciudades en alerta para dar los detalles
     for indice, fila in ciudades_en_alerta.iterrows():
@@ -187,13 +205,13 @@ if len(ciudades_en_alerta) > 0:
         temperatura = fila['ta']
         print(f"🔴 ALERTA en {nombre}: {temperatura}°C")
 else:
-    print("✅ Robot: Todo bajo control. Ninguna estación supera el límite de calor.")
+    print("✅ Robot: Todo bajo control en Tenerife. Ninguna estación supera el límite de calor.")
 
 # Si hay alertas, guardamos un archivo especial de incidencias
 if not ciudades_en_alerta.empty:
-    nombre_alerta = f"ALERTA_CALOR_{fecha_hoy}.csv"
+    nombre_alerta = f"ALERTA_CALOR_TENERIFE_{fecha_hoy}.csv"
     ciudades_en_alerta.to_csv(nombre_alerta, index=False)
-    print(f"📝 Se ha generado un registro de incidencias en: {nombre_alerta}")
+    print(f"📝 Se ha generado un registro de incidencias en Tenerife en: {nombre_alerta}")
 
 # 1. Importamos el "cerebro" de predicción
 from sklearn.linear_model import LinearRegression
@@ -215,7 +233,7 @@ modelo.fit(X, y)
 hora_futura = np.array([[16]])
 prediccion = modelo.predict(hora_futura)
 
-print(f"🔮 Robot: Según la tendencia, a las 16:00 hará unos {prediccion[0]:.2f}°C")
+print(f"🔮 Robot: Según la tendencia en Tenerife, a las 16:00 hará unos {prediccion[0]:.2f}°C")
 
 # Dibujamos los puntos reales
 plt.scatter(X, y, color='green', label='Datos reales')
@@ -223,7 +241,7 @@ plt.scatter(X, y, color='green', label='Datos reales')
 # Dibujamos la línea que el robot cree que sigue el clima
 plt.plot(X, modelo.predict(X), color='gold', label='Línea de tendencia')
 
-plt.title('Predicción del robot: ¿Hacia dónde va la temperatura?')
+plt.title('Predicción del robot en Tenerife: ¿Hacia dónde va la temperatura?')
 plt.xlabel('Hora del día')
 plt.ylabel('Temperatura (°C)')
 plt.legend()
@@ -235,7 +253,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# 2. Imaginemos que nuestra 'tabla_clima' tiene datos de una estación 
+# 2. Imaginemos que nuestra 'tabla_clima' tiene datos de una estación en Tenerife
 # a lo largo del tiempo (ej. de 8:00 a 13:00)
 datos_estacion = {
     'hora': [8, 9, 10, 11, 12, 13],
@@ -256,7 +274,7 @@ IA_clima.fit(X, y)
 proxima_hora = [[14]]
 prediccion = IA_clima.predict(proxima_hora)
 
-print(f"🔮 Predicción IA: A las 14:00 la temperatura estimada es de {prediccion[0]:.2f}°C")
+print(f"🔮 Predicción IA en Tenerife: A las 14:00 la temperatura estimada es de {prediccion[0]:.2f}°C")
 
 # 6. Dibujar la "Recta de Predicción"
 plt.figure(figsize=(10, 6))
@@ -264,7 +282,7 @@ plt.scatter(X, y, color='green', label='Datos reales medidos') # Puntos reales
 plt.plot(X, IA_clima.predict(X), color='gold', linewidth=2, label='Tendencia calculada') # Línea de la IA
 plt.scatter(proxima_hora, prediccion, color='crimson', marker='*', s=200, label='Predicción futura') # Estrellita futura
 
-plt.title('Modelo de Predicción Lineal: Tendencia Térmica')
+plt.title('Modelo de Predicción Lineal en Tenerife: Tendencia Térmica')
 plt.xlabel('Hora del día')
 plt.ylabel('Temperatura (°C)')
 plt.legend()
@@ -275,17 +293,17 @@ plt.show()
 # La pendiente nos dice cuántos grados sube o baja el clima por cada hora
 pendiente = IA_clima.coef_[0]
 
-print(f"📊 Análisis de tendencia: {pendiente:.2f} °C por hora.")
+print(f"📊 Análisis de tendencia en Tenerife: {pendiente:.2f} °C por hora.")
 print("-" * 50)
 
 # 2. El Robot decide qué consejo dar
 if pendiente > 1.0:
-    consejo = "🔥 ¡Cuidado! El calor está subiendo rápidamente. Hidrátate y busca sombra."
+    consejo = "🔥 ¡Cuidado en Tenerife! El calor está subiendo rápidamente. Hidrátate y busca sombra."
 elif pendiente > 0:
-    consejo = "☀️ El día se está calentando suavemente. Disfruta del sol con precaución."
+    consejo = "☀️ El día se está calentando suavemente en Tenerife. Disfruta del sol con precaución."
 elif pendiente < -1.0:
-    consejo = "🧊 ¡Atención! La temperatura está bajando de golpe. Coge una chaqueta."
+    consejo = "🧊 ¡Atención! La temperatura en Tenerife está bajando de golpe. Coge una chaqueta."
 else:
-    consejo = "☁️ El clima está muy estable ahora mismo. No se esperan cambios bruscos."
+    consejo = "☁️ El clima en Tenerife está muy estable ahora mismo. No se esperan cambios bruscos."
 
 print(f"🤖 CONSEJO DEL ROBOT: {consejo}")
