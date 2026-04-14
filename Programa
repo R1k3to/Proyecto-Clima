@@ -17,8 +17,8 @@ headers = {'cache-control': "no-cache", 'api_key': api_key}
 # --- DEFINICIÓN DE MUNICIPIOS DE TENERIFE ---
 municipios_tenerife = [
     'Adeje', 'Arafo', 'Arico', 'Arona', 'Buenavista del Norte',
-    'Candelaria', 'El Rosario', 'El Sauzal', 'El Tanque', 'Fasnia', 'Garachico',
-    'Granadilla de Abona', 'Güímar', 'Vilaflor', 'Icod de los Vinos',
+    'Candelaria', 'El Rosario', 'El SauzalEl Tanque', 'Fasnia', 'Garachico', 'Granadilla de Abona',
+    'Güímar', 'Vilaflor', 'Icod de los Vinos',
     'La Guancha', 'La Laguna', 'La Orotava', 'La Victoria de Acentejo',
     'La Matanza de Acentejo', 'Los Realejos', 'Los Silos', 'Santa Úrsula',
     'Puerto de la Cruz', 'Tacoronte', 'Tegueste', 'Santa Cruz de Tenerife',
@@ -43,10 +43,10 @@ if datos_permiso['estado'] == 200:
 
     # Estos son nuestros datos climáticos reales
     datos_climaticos_todos = respuesta_final.json()
-    
+
     # --- FILTRADO EXCLUSIVO PARA TENERIFE ---
     datos_climaticos = [
-        estacion for estacion in datos_climaticos_todos 
+        estacion for estacion in datos_climaticos_todos
         if any(municipio.lower() in estacion.get('ubi', '').lower() for municipio in municipios_tenerife)
     ]
 
@@ -245,6 +245,7 @@ plt.title('Predicción del robot en Tenerife: ¿Hacia dónde va la temperatura?'
 plt.xlabel('Hora del día')
 plt.ylabel('Temperatura (°C)')
 plt.legend()
+plt.grid(True, linestyle='--', alpha=0.6)
 plt.show()
 
 # 1. Herramientas necesarias
@@ -263,7 +264,7 @@ df_pred = pd.DataFrame(datos_estacion)
 
 # 3. Preparar los datos para la IA
 # El robot necesita las horas en una columna vertical (X) y las temperaturas en otra (y)
-X = df_pred['hora'].values.reshape(-1, 1) 
+X = df_pred['hora'].values.reshape(-1, 1)
 y = df_pred['ta'].values
 
 # 4. Crear y entrenar el modelo (El robot estudia la tendencia)
@@ -307,3 +308,47 @@ else:
     consejo = "☁️ El clima en Tenerife está muy estable ahora mismo. No se esperan cambios bruscos."
 
 print(f"🤖 CONSEJO DEL ROBOT: {consejo}")
+# --- PASO EXTRA PARA COLAB ---
+# Esta línea asegura que los gráficos se muestren integrados en la celda
+%matplotlib inline
+
+# 1. Filtramos los datos de Tenerife
+# Importante: verifica que 'Tenerife' esté escrito exactamente igual en tu tabla
+datos_tenerife = tabla_clima[tabla_clima['ubi'].str.contains('Tenerife', case=False)].copy()
+
+# Verificación rápida: si no hay datos, el gráfico saldrá en blanco
+if datos_tenerife.empty:
+    print("❌ Error: No hay datos para 'Tenerife'. Revisa el nombre en la columna 'ubi'.")
+else:
+    # 2. Calculamos extremos
+    max_temp = datos_tenerife['ta'].max()
+    min_temp = datos_tenerife['ta'].min()
+
+    # 3. Asignamos colores
+    colores = []
+    for temperatura in datos_tenerife['ta']:
+        if temperatura == max_temp:
+            colores.append('red')
+        elif temperatura == min_temp:
+            colores.append('blue')
+        else:
+            colores.append('lightgrey')
+
+    # 4. Configuración del lienzo
+    plt.figure(figsize=(14, 7))
+
+    # 5. Creamos el gráfico
+    # Usamos el índice como eje X (puedes cambiarlo por 'fec' si tienes columna de fecha)
+    plt.bar(range(len(datos_tenerife)), datos_tenerife['ta'], color=colores)
+
+    # 6. Títulos y etiquetas
+    plt.title('Temperaturas en Tenerife', fontsize=16)
+    plt.ylabel('Grados Celsius (°C)')
+    plt.xlabel('Número de medición')
+
+# Guardar la imagen
+plt.savefig("grafica_temperatura_Tenerife.png", dpi=300, bbox_inches='tight')
+
+# --- PASO CLAVE PARA VISUALIZACIÓN ---
+plt.show() # Obliga a Python a mostrar el dibujo aquí mismo
+import matplotlib.pyplot as plt
