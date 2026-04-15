@@ -17,7 +17,7 @@ headers = {'cache-control': "no-cache", 'api_key': api_key}
 # --- DEFINICIÓN DE MUNICIPIOS DE TENERIFE ---
 municipios_tenerife = [
     'Adeje', 'Arafo', 'Arico', 'Arona', 'Buenavista del Norte',
-    'Candelaria', 'El Rosario', 'El SauzalEl Tanque', 'Fasnia', 'Garachico', 'Granadilla de Abona',
+    'Candelaria', 'El Rosario', 'El Sauzal', 'El Tanque', 'Fasnia', 'Garachico', 'Granadilla de Abona',
     'Güímar', 'Vilaflor', 'Icod de los Vinos',
     'La Guancha', 'La Laguna', 'La Orotava', 'La Victoria de Acentejo',
     'La Matanza de Acentejo', 'Los Realejos', 'Los Silos', 'Santa Úrsula',
@@ -25,6 +25,14 @@ municipios_tenerife = [
     'San Juan de la Rambla', 'Guía de Isora', 'Santiago del Teide',
     'San Miguel de Abona'
 ]
+
+# --- RANGOS DE COORDENADAS PARA TENERIFE (APROXIMADOS) ---
+# Latitud: 27.5°N a 29.0°N -> Ajustado a un rango más preciso para Tenerife
+# Longitud: 17.5°W a 15.5°W (o -17.5 a -15.5 en el sistema de AEMET) -> Ajustado a un rango más preciso
+min_lat_tenerife = 28.0 # Coordenadas más precisas para Tenerife
+max_lat_tenerife = 28.7
+min_lon_tenerife = -17.0
+max_lon_tenerife = -16.0
 
 # --- VIAJE 1: Pedir permiso y dirección secreta ---
 print("🤖 Robot: Hola AEMET, ¿me das permiso para ver el clima de hoy?")
@@ -44,10 +52,12 @@ if datos_permiso['estado'] == 200:
     # Estos son nuestros datos climáticos reales
     datos_climaticos_todos = respuesta_final.json()
 
-    # --- FILTRADO EXCLUSIVO PARA TENERIFE ---
+    # --- FILTRADO EXCLUSIVO PARA TENERIFE (USANDO COORDENADAS) ---
+    # Se usa el rango de coordenadas ajustado para filtrar inicialmente
     datos_climaticos = [
         estacion for estacion in datos_climaticos_todos
-        if any(municipio.lower() in estacion.get('ubi', '').lower() for municipio in municipios_tenerife)
+        if min_lat_tenerife <= estacion.get('lat', 0) <= max_lat_tenerife and \
+           min_lon_tenerife <= estacion.get('lon', 0) <= max_lon_tenerife
     ]
 
     # Vamos a mostrar solo los primeros 2 registros para no llenar la pantalla
@@ -65,11 +75,16 @@ import pandas as pd # Importamos Pandas con el apodo 'pd' (es el estándar)
 # Le decimos a Pandas: "Coge esta lista de fichas (JSON) y conviértela en una tabla"
 tabla_clima = pd.DataFrame(datos_climaticos)
 
-# 2. El robot nos enseña la tabla limpia
+# 2. Filtrado adicional por nombre de municipio para asegurar que solo sean de Tenerife
+municipios_lower = [m.lower() for m in municipios_tenerife]
+mask_municipios = tabla_clima['ubi'].apply(lambda x: any(mun in x.lower() for mun in municipios_lower))
+tabla_clima = tabla_clima[mask_municipios].copy()
+
+# 3. El robot nos enseña la tabla limpia
 print("✨ Robot: ¡Tachán! He organizado los datos en una tabla:")
 print(tabla_clima.head()) # '.head()' le dice al robot: "enséñame solo las primeras 5 filas"
 
-# 3. Guardar el trabajo para GitHub o Excel
+# 4. Guardar el trabajo para GitHub o Excel
 # Podemos guardar esta tabla en un archivo .csv (compatible con Excel)
 tabla_clima.to_csv("datos_aemet_tenerife_final.csv", index=False)
 print("💾 Robot: He guardado la tabla en un archivo llamado 'datos_aemet_tenerife_final.csv'")
@@ -313,12 +328,12 @@ print(f"🤖 CONSEJO DEL ROBOT: {consejo}")
 %matplotlib inline
 
 # 1. Filtramos los datos de Tenerife
-# Importante: verifica que 'Tenerife' esté escrito exactamente igual en tu tabla
-datos_tenerife = tabla_clima[tabla_clima['ubi'].str.contains('Tenerife', case=False)].copy()
+# NOTA: Ahora 'tabla_clima' ya debería contener solo datos de municipios de Tenerife tras el filtro superior
+datos_tenerife = tabla_clima.copy() # Ya no es necesario un str.contains('Tenerife') aquí.
 
 # Verificación rápida: si no hay datos, el gráfico saldrá en blanco
 if datos_tenerife.empty:
-    print("❌ Error: No hay datos para 'Tenerife'. Revisa el nombre en la columna 'ubi'.")
+    print("❌ Error: No hay datos para los municipios de Tenerife tras el filtro.")
 else:
     # 2. Calculamos extremos
     max_temp = datos_tenerife['ta'].max()
@@ -352,3 +367,65 @@ plt.savefig("grafica_temperatura_Tenerife.png", dpi=300, bbox_inches='tight')
 # --- PASO CLAVE PARA VISUALIZACIÓN ---
 plt.show() # Obliga a Python a mostrar el dibujo aquí mismo
 import matplotlib.pyplot as plt
+
+import pandas as pd
+
+# 1. Filtrar los datos específicamente para Santa Cruz de Tenerife
+# Buscamos en la columna 'ubi' (ubicación)
+filtro_santa_cruz = tabla_clima['ubi'].str.contains('SANTA CRUZ DE TENERIFE', case=False, na=False)
+datos_st_cruz = tabla_clima[filtro_santa_cruz].copy()
+
+# 2. Selección de columnas solicitadas
+# Nota: 'ta' es Temperatura, 'hr' es Humedad Relativa.
+# Las columnas 'pm25' y 'co2' no suelen estar en la API convencional de AEMET,
+# pero las incluiremos en la selección por si estuvieran presentes en tus metadatos.
+columnas_interes = ['fint', 'ubi', 'ta', 'hr']
+if 'pm25' in datos_st_cruz.columns:
+    columnas_interes.append('pm25')
+if 'co2' in datos_st_cruz.columns:
+    columnas_interes.append('co2')
+
+# Mostrar el resultado
+print("🤖 Robot: Extrayendo datos para Santa Cruz de Tenerife...")
+display(datos_st_cruz[columnas_interes])
+
+# 3. Clasificación sugerida (Lógica para el alumnado)
+def clasificar_estado(row):
+    # Ejemplo de lógica simplificada basada en visibilidad o humedad si no hay sensores de partículas
+    if row['ta'] > 25 and row['hr'] < 30:
+        return 'Posible Episodio de Calima'
+    else:
+        return 'Aire Limpio / Normal'
+
+datos_st_cruz['Estado_Estimado'] = datos_st_cruz.apply(clasificar_estado, axis=1)
+display(datos_st_cruz[['fint', 'ta', 'hr', 'Estado_Estimado']])
+
+import pandas as pd
+import numpy as np
+
+# 1. Extracción: Filtrar los datos de Santa Cruz de Tenerife
+# Buscamos en la columna 'ubi' (ubicación) dentro de la tabla_clima original
+filtro_st = tabla_clima['ubi'].str.contains('SANTA CRUZ DE TENERIFE', case=False, na=False)
+datos_st_cruz = tabla_clima[filtro_st].copy()
+
+# 2. Limpieza Crítica
+datos_limpios = datos_st_cruz.copy()
+
+# A. Eliminar duplicados y nulos en columnas de tiempo y clima
+antes_limpieza = len(datos_limpios)
+datos_limpios = datos_limpios.drop_duplicates()
+datos_limpios = datos_limpios.dropna(subset=['fint', 'ta', 'hr'])
+
+# B. Corregir fallos de sensor (Lógica para CO2 y PM2.5)
+if 'co2' in datos_limpios.columns:
+    datos_limpios = datos_limpios[datos_limpios['co2'] >= 0]
+
+if 'pm25' in datos_limpios.columns:
+    # Descartamos si hay humedad extrema (>90%) que falsee la lectura láser de partículas
+    datos_limpios = datos_limpios[datos_limpios['hr'] < 90.0]
+
+print(f"🤖 Robot: Limpieza finalizada. Registros procesados: {antes_limpieza} -> {len(datos_limpios)}")
+
+# 3. Mostrar y Guardar
+display(datos_limpios.head())
+datos_limpios.to_csv('datos_santa_cruz_limpios.csv', index=False)
